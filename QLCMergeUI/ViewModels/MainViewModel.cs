@@ -17,8 +17,10 @@ namespace QLCMergeUI.ViewModels
 
         public ICommand LoadRightCommand { get; }
 
+        public ObservableCollection<FixtureDef> LeftFixtures { get; set; } = new ObservableCollection<FixtureDef>();
         public ObservableCollection<FunctionDef> LeftFunctions { get; set; } = new ObservableCollection<FunctionDef>();
 
+        public ObservableCollection<FixtureDef> RightFixtures { get; set; } = new ObservableCollection<FixtureDef>();
         public ObservableCollection<FunctionDef> RightFunctions { get; set; } = new ObservableCollection<FunctionDef>();
 
         public MainViewModel()
@@ -30,13 +32,13 @@ namespace QLCMergeUI.ViewModels
         private async Task LoadLeftSource()
         {
             LeftFilePath = await SelectSourceFile() ?? _pathPlaceholder;
-            LoadFunctionDefinitions(LeftFilePath, LeftFunctions);
+            LoadDefinitions(LeftFilePath, LeftFixtures, LeftFunctions);
         }
 
         private async Task LoadRightSource()
         {
             RightFilePath = await SelectSourceFile() ?? _pathPlaceholder;
-            LoadFunctionDefinitions(RightFilePath, RightFunctions);
+            LoadDefinitions(RightFilePath, RightFixtures, RightFunctions);
         }
 
         private async Task<string?> SelectSourceFile()
@@ -54,12 +56,19 @@ namespace QLCMergeUI.ViewModels
             return selected?.FullPath;
         }
 
-        private void LoadFunctionDefinitions(string filePath, ObservableCollection<FunctionDef> functionsList)
+        private void LoadDefinitions(string filePath, ObservableCollection<FixtureDef> fixturesList, ObservableCollection<FunctionDef> functionsList)
         {
             var result = Loader.OpenProjectFile(filePath);
 
             if (result.IsValid)
             {
+                var fixtures = Loader.DiscoverFixtures(result.XmlDoc);
+                fixturesList.Clear();
+                foreach (var fixture in fixtures)
+                {
+                    fixturesList.Add(fixture.Value);
+                }
+
                 var funcs = Loader.DiscoverFunctions(result.XmlDoc);
                 functionsList.Clear();
                 foreach (var func in funcs)

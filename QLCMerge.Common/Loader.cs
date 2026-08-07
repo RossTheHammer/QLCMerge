@@ -30,6 +30,33 @@ namespace QLCMerge.Common
             return (isValid, xmlDoc);
         }
 
+        public static Dictionary<int, FixtureDef> DiscoverFixtures(XmlDocument xml)
+        {
+            var fixtureDefs = new Dictionary<int, FixtureDef>();
+
+            var fixtureXmlNodes = GetFixtures(xml);
+
+            if (fixtureXmlNodes != null)
+            {
+                var offsetPointer = 0;
+                while (offsetPointer < fixtureXmlNodes.Count)
+                {
+                    var funcDef = GetKeyFixtureValues(fixtureXmlNodes[offsetPointer] as XmlElement);
+
+                    if (funcDef == null)
+                    {
+                        // Maybe not an element, or other failure, just increment to skip
+                        offsetPointer++;
+                    }
+                    else
+                    {
+                        fixtureDefs.Add(offsetPointer++, funcDef);
+                    }
+                }
+            }
+            return fixtureDefs;
+        }
+
         public static Dictionary<int, FunctionDef> DiscoverFunctions(XmlDocument xml)
         {
             var funcDefs = new Dictionary<int, FunctionDef>();
@@ -194,6 +221,12 @@ namespace QLCMerge.Common
             }
         }
 
+        public static XmlNodeList? GetFixtures(XmlDocument xmlDoc)
+        {
+            var engine = xmlDoc.DocumentElement?.GetElementsByTagName("Engine");
+            return engine != null ? (engine[0] as XmlElement)?.GetElementsByTagName("Fixture") : null;
+        }
+
         public static XmlNodeList? GetFunctions(XmlDocument xmlDoc)
         {
             var engine = xmlDoc.DocumentElement?.GetElementsByTagName("Engine");
@@ -232,6 +265,57 @@ namespace QLCMerge.Common
                 }
             }
             return null;
+        }
+
+        private static FixtureDef? GetKeyFixtureValues(XmlElement? element)
+        {
+            if (element == null)
+            {
+                return null;
+            }
+
+            var fixture = new FixtureDef()
+            { 
+                Inner = element.InnerXml 
+            };
+
+            foreach (var item in element.ChildNodes)
+            {
+                if (item is XmlElement elem)
+                {
+                    switch (elem.Name)
+                    {
+                        case "ID":
+                            if(int.TryParse(elem.InnerText, out var id))
+                            {
+                                fixture.Id = id;
+                            }
+                            break;
+                        case "Name":
+                            fixture.Name = elem.InnerText; 
+                            break;
+                        case "Manufacturer":
+                            fixture.Manufacturer = elem.InnerText;
+                            break;
+                        case "Model":
+                            fixture.Model = elem.InnerText;
+                            break;
+                        case "Address":
+                            if (int.TryParse(elem.InnerText, out var addr))
+                            {
+                                fixture.Address = addr;
+                            }
+                            break;
+                        case "Channels":
+                            if (int.TryParse(elem.InnerText, out var chans))
+                            {
+                                fixture.Channels = chans;
+                            }
+                            break;
+                    }
+                }
+            }
+            return fixture;
         }
 
         private static FunctionDef? GetKeyFunctionValues(XmlElement? element)

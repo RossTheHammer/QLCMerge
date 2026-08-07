@@ -23,40 +23,37 @@
                 <ColumnDefinition/>
                 <ColumnDefinition/>
             </Grid.ColumnDefinitions>
-            <Grid Grid.Column="0" x:Name="leftFile">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition/>
-                </Grid.RowDefinitions>
-                <Grid Grid.Row="0" x:Name="leftControlBar">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <Button Grid.Column="0" Text="Select..." Command="{Binding LoadLeftCommand}"></Button>
-                    <Label Grid.Column="1" Text="{Binding LeftFilePath}"/>
-                    <Button Grid.Column="2" Text="Save"></Button>
-                </Grid>
-                <material:TreeView Grid.Row="1" ItemsSource="{Binding LeftFunctions}"/>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="20*"/>
+                <RowDefinition Height="80*"/>
+            </Grid.RowDefinitions>
+            <!-- LEFT FILE -->
+            <Grid Grid.Row="0" Grid.Column="0" x:Name="leftControlBar">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Text="Select..." Command="{Binding LoadLeftCommand}"></Button>
+                <Label Grid.Column="1" Text="{Binding LeftFilePath}"/>
+                <Button Grid.Column="2" Text="Save"></Button>
             </Grid>
-            <Grid Grid.Column="1" x:Name="rightFile">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition/>
-                </Grid.RowDefinitions>
-                <Grid Grid.Row="0" x:Name="rightControlBar">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <Button Grid.Column="0" Text="Select..." Command="{Binding LoadRightCommand}"></Button>
-                    <Label Grid.Column="1" Text="{Binding RightFilePath}"/>
-                    <Button Grid.Column="2" Text="Save"></Button>
-                </Grid>
-                <material:TreeView Grid.Row="1" ItemsSource="{Binding RightFunctions}"/>
+            <material:TreeView Grid.Row="1" Grid.Column="0" ItemsSource="{Binding LeftFixtures}"/>
+            <material:TreeView Grid.Row="2" Grid.Column="0" ItemsSource="{Binding LeftFunctions}"/>
+            <!-- RIGHT FILE -->
+            <Grid Grid.Row="0" Grid.Column="1" x:Name="rightControlBar">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Text="Select..." Command="{Binding LoadRightCommand}"></Button>
+                <Label Grid.Column="1" Text="{Binding RightFilePath}"/>
+                <Button Grid.Column="2" Text="Save"></Button>
             </Grid>
+            <material:TreeView Grid.Row="1" Grid.Column="1" ItemsSource="{Binding RightFixtures}"/>
+            <material:TreeView Grid.Row="2" Grid.Column="1" ItemsSource="{Binding RightFunctions}"/>
         </Grid>
         <!--<VerticalStackLayout
             Padding="30,0"
