@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.Collections;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using QLCMerge.Common;
 using System.Collections.ObjectModel;
@@ -7,17 +8,59 @@ using Windows.ApplicationModel.Activation;
 
 namespace QLCMergeUI.ViewModels
 {
-    public class MainViewModel : BindableObject
+    partial class MainViewModel : ObservableObject
     {
         private const string _pathPlaceholder = "[pick a compatible file]";
 
-        public string LeftFilePath { get; set; } = _pathPlaceholder;
+        private string _leftFilePath = _pathPlaceholder;
+        private string _rightFilePath = _pathPlaceholder;
+        private bool _fixturesMatch = false;
+        private bool _functionsMatch = false;
+        private int? _divergentId = null;
+        private int _leftDivergentCount = 0;
+        private int _rightDivergentCount = 0;
 
-        public string RightFilePath { get; set; } = _pathPlaceholder;
+        public string LeftFilePath
+        {
+            get => _leftFilePath;
+            set => SetProperty(ref _leftFilePath, value);
+        }
 
-        public ICommand LoadLeftCommand { get; }
+        public string RightFilePath
+        {
+            get => _rightFilePath;
+            set => SetProperty(ref _rightFilePath, value);
+        }
 
-        public ICommand LoadRightCommand { get; }
+        public bool FixturesMatch
+        {
+            get => _fixturesMatch;
+            set => SetProperty(ref _fixturesMatch, value);
+        }
+
+        public bool FunctionsMatch
+        {
+            get => _functionsMatch;
+            set => SetProperty(ref _functionsMatch, value);
+        }
+
+        public int? DivergentId
+        {
+            get => _divergentId;
+            set => SetProperty(ref _divergentId, value);
+        }
+
+        public int LeftDivergentCount
+        {
+            get => _leftDivergentCount;
+            set => SetProperty(ref _leftDivergentCount, value);
+        }
+
+        public int RightDivergentCount
+        {
+            get => _rightDivergentCount;
+            set => SetProperty(ref _rightDivergentCount, value);
+        }
 
         public ObservableCollection<FixtureDef> LeftFixtures { get; set; } = new ObservableCollection<FixtureDef>();
         public ObservableCollection<FunctionDef> LeftFunctions { get; set; } = new ObservableCollection<FunctionDef>();
@@ -25,9 +68,11 @@ namespace QLCMergeUI.ViewModels
         public ObservableCollection<FixtureDef> RightFixtures { get; set; } = new ObservableCollection<FixtureDef>();
         public ObservableCollection<FunctionDef> RightFunctions { get; set; } = new ObservableCollection<FunctionDef>();
 
-        public bool FixturesMatch { get; set; } = false;
+        public ICommand LoadLeftCommand { get; }
 
-        public MainViewModel()
+        public ICommand LoadRightCommand { get; }
+
+        public MainViewModel() : base()
         {
             LoadLeftCommand = new AsyncRelayCommand(LoadLeftSource);
             LoadRightCommand = new AsyncRelayCommand(LoadRightSource);
@@ -94,7 +139,11 @@ namespace QLCMergeUI.ViewModels
             }
 
             FixturesMatch = DoFixturesMatch();
-            CompareFunctions();
+            var functionComparison = CompareFunctions();
+            FunctionsMatch = functionComparison.synced;
+            DivergentId = functionComparison.synced ? null : functionComparison.divergentId;
+            LeftDivergentCount = LeftFunctions.Count(f => f.Matched == DefinitionMatchType.Divergent);
+            RightDivergentCount = RightFunctions.Count(f => f.Matched == DefinitionMatchType.Divergent);
         }
 
         private bool DoFixturesMatch()
@@ -120,13 +169,13 @@ namespace QLCMergeUI.ViewModels
             return true;
         }
 
-        private void CompareFunctions()
+        private (bool synced, int divergentId) CompareFunctions()
         {
-            if(LeftFunctions.Count == 0 || RightFunctions.Count == 0) { return; }
+            if(LeftFunctions.Count == 0 || RightFunctions.Count == 0) { return (false,0); }
 
             var maxLeftId = LeftFunctions.Select(f => f.Id).Max();
             var maxRightId = RightFunctions.Select(f => f.Id).Max();
-            if (maxLeftId == null || maxRightId == null) { return; }
+            if (maxLeftId == null || maxRightId == null) { return (false, 0); }
 
             var maxId = Math.Max(maxLeftId.Value, maxRightId.Value);
             var divergedAt = maxId + 1;
@@ -213,7 +262,7 @@ namespace QLCMergeUI.ViewModels
             }
 
             var synced = divergedAt > maxId;
-
+            return (synced, divergedAt);
         }
     }
 }
