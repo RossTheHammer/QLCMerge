@@ -1,14 +1,52 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:QLCMergeUI"
+             xmlns:common="clr-namespace:QLCMerge.Common;assembly=QLCMerge.Common"
              xmlns:viewModels="clr-namespace:QLCMergeUI.ViewModels"
              xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
-             xmlns:m="clr-namespace:UraniumUI.Icons.MaterialSymbols;assembly=UraniumUI.Icons.MaterialSymbols"
+             xmlns:Converters="clr-namespace:QLCMergeUI.ViewModels.Converters"
              x:Class="QLCMergeUI.MainPage"
              x:DataType="viewModels:MainViewModel">
+    <!--xmlns:m="clr-namespace:UraniumUI.Icons.MaterialSymbols;assembly=UraniumUI.Icons.MaterialSymbols"-->
     <ContentPage.BindingContext>
         <viewModels:MainViewModel/>
     </ContentPage.BindingContext>
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <Converters:DefinitionMatchTypeToVisibilityConverter x:Key="definitionMatchTypeToVisibilityConverter"/>
+            <DataTemplate x:Key="fixtureTile" x:DataType="common:FixtureDef">
+                <HorizontalStackLayout Spacing="5">
+                    <!--<Image Source="{FontImageSource FontFamily=MaterialOutlined, Glyph={x:Static m:MaterialOutlined.Folder}, Color={StaticResource Primary}}" />-->
+                    <Label Text="{Binding Name}" FontAttributes="Bold" />
+                    <Label Text="{Binding Model, StringFormat='[{0}]'}" />
+                    <Label Text="{Binding Address, StringFormat='[{0}]'}" />
+                    <Label Text="{Binding Channels, StringFormat='[{0}]'}" />
+                </HorizontalStackLayout>
+            </DataTemplate>
+            <DataTemplate x:Key="functionTile" x:DataType="common:FunctionDef">
+                <HorizontalStackLayout Spacing="5">
+                    <!-- IsVisible="{Binding Matched, Converter={Static DefinitionMatchTypeToVisibilityConverter}}" -->
+                    <!--<Image Source="{FontImageSource FontFamily=MaterialOutlined, Glyph={x:Static m:MaterialOutlined.Folder}, Color={StaticResource Primary}}" />-->
+                    <Label Text="{Binding Name}" FontAttributes="Bold" Padding="5" />
+                    <Label Text="{Binding Children.Count, StringFormat='({0})'}" />
+                    <Label Text="{Binding ElemType, StringFormat='[{0}]'}" />
+                    <Label Text="{Binding Matched}" />
+                </HorizontalStackLayout>
+            </DataTemplate>
+            <!--<DataTemplate x:Key="folder" x:DataType="common:FunctionFolder">
+                <HorizontalStackLayout Spacing="5">
+                    --><!--<Image Source="{FontImageSource FontFamily=MaterialOutlined, Glyph={x:Static m:MaterialOutlined.Folder}, Color={StaticResource Primary}}" />--><!--
+                    <Label Text="{Binding Name}" FontAttributes="Bold" />
+                    <Label Text="{Binding Children.Count, StringFormat='({0})'}" />
+                    <Label Text="{Binding ElemType, StringFormat='[{0}]'}" />
+                </HorizontalStackLayout>
+            </DataTemplate>
+            <local:TreeNodeTemplateSelector x:Key="treeTileSelector"
+                    Folder="{StaticResource folder}"
+                    Leaf="{StaticResource functionTile}" />-->
+        </ResourceDictionary>
+    </ContentPage.Resources>
     <Grid x:Name="mainGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -28,6 +66,7 @@
                 <RowDefinition Height="20*"/>
                 <RowDefinition Height="80*"/>
             </Grid.RowDefinitions>
+            
             <!-- LEFT FILE -->
             <Grid Grid.Row="0" Grid.Column="0" x:Name="leftControlBar">
                 <Grid.ColumnDefinitions>
@@ -39,8 +78,22 @@
                 <Label Grid.Column="1" Text="{Binding LeftFilePath}"/>
                 <Button Grid.Column="2" Text="Save"></Button>
             </Grid>
-            <material:TreeView Grid.Row="1" Grid.Column="0" ItemsSource="{Binding LeftFixtures}"/>
-            <material:TreeView Grid.Row="2" Grid.Column="0" ItemsSource="{Binding LeftFunctions}"/>
+            <Border Grid.Row="1" Grid.Column="0" StrokeThickness="3">
+                <CollectionView Grid.Row="1" Grid.Column="0" 
+                    ItemsSource="{Binding LeftFixtures}"
+                    ItemTemplate="{StaticResource fixtureTile}"/>
+            </Border>
+            <Border Grid.Row="2" Grid.Column="0" StrokeThickness="3">
+                <CollectionView 
+                    SelectionMode="Multiple"
+                    ItemsSource="{Binding LeftFunctions}"
+                    ItemTemplate="{StaticResource functionTile}"/>
+            </Border>
+            <!--<material:TreeView Grid.Row="2" Grid.Column="0" 
+                    ItemsSource="{Binding LeftFunctions}"
+                    ItemTemplate="{StaticResource functionTile}"
+                    SelectionMode="Multiple"/>-->
+            
             <!-- RIGHT FILE -->
             <Grid Grid.Row="0" Grid.Column="1" x:Name="rightControlBar">
                 <Grid.ColumnDefinitions>
@@ -52,8 +105,22 @@
                 <Label Grid.Column="1" Text="{Binding RightFilePath}"/>
                 <Button Grid.Column="2" Text="Save"></Button>
             </Grid>
-            <material:TreeView Grid.Row="1" Grid.Column="1" ItemsSource="{Binding RightFixtures}"/>
-            <material:TreeView Grid.Row="2" Grid.Column="1" ItemsSource="{Binding RightFunctions}"/>
+            <Border Grid.Row="1" Grid.Column="1" StrokeThickness="3">
+                <CollectionView 
+                    ItemsSource="{Binding RightFixtures}"
+                    ItemTemplate="{StaticResource fixtureTile}"/>
+            </Border>
+            <Border Grid.Row="2" Grid.Column="1" StrokeThickness="3">
+                <CollectionView 
+                    SelectionMode="Multiple"
+                    ItemsSource="{Binding RightFunctions}"
+                    ItemTemplate="{StaticResource functionTile}"/>
+            </Border>
+            <!--<material:TreeView Grid.Row="2" Grid.Column="1" 
+                    ItemsSource="{Binding RightFunctions}"
+                    ItemTemplate="{StaticResource functionTile}"
+                    SelectionMode="Multiple"/>-->
+
         </Grid>
         <!--<VerticalStackLayout
             Padding="30,0"

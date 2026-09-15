@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Xml;
 
 namespace QLCMerge.Common
@@ -57,7 +58,8 @@ namespace QLCMerge.Common
             return fixtureDefs;
         }
 
-        public static Dictionary<int, FunctionDef> DiscoverFunctions(XmlDocument xml)
+        public static readonly string[] SupportedFunctionTypes = { "Chaser", "Function", "Collection", "Scene", "Show", "Sequence", "Audio", "Video" };
+        public static IDictionary<int, FunctionDef> DiscoverFunctions(XmlDocument xml)
         {
             var funcDefs = new Dictionary<int, FunctionDef>();
             
@@ -158,7 +160,7 @@ namespace QLCMerge.Common
                             var left = FindInLeft(rightDef, leftFunctions, leftDef);
                             if (right == null || left == null)
                             {
-                                CompareInners(leftDef.Inner, rightDef.Inner, "    ");
+                                CompareInners(leftDef.Inner ?? "", rightDef.Inner ?? "", "    ");
                             }
                         }
                         if (leftDef.Id != rightDef.Id)
@@ -186,7 +188,7 @@ namespace QLCMerge.Common
                             synced = false;
 
                         }
-                        lastId = Math.Max(leftDef.Id, rightDef.Id);
+                        lastId = Math.Max(leftDef.Id.GetValueOrDefault(), rightDef.Id.GetValueOrDefault());
                         leftDefs.Add(leftOffset++, leftDef);
                         rightDefs.Add(rightOffset++, rightDef);
                     }
@@ -329,7 +331,7 @@ namespace QLCMerge.Common
             var name = element.GetAttribute("Name");
             var elType = element.GetAttribute("Type");
 
-            return new FunctionDef(id, name, elType, element.InnerXml);
+            return new FunctionDef(elType, name, id, element.InnerXml);
         }
 
         private static string FormatForId(FunctionDef def) => $"[{def.Id}]";

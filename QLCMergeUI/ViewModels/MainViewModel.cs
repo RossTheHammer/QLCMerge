@@ -1,7 +1,9 @@
-﻿using CommunityToolkit.Mvvm.Input;
+﻿using CommunityToolkit.Mvvm.Collections;
+using CommunityToolkit.Mvvm.Input;
 using QLCMerge.Common;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using Windows.ApplicationModel.Activation;
 
 namespace QLCMergeUI.ViewModels
 {
@@ -23,10 +25,23 @@ namespace QLCMergeUI.ViewModels
         public ObservableCollection<FixtureDef> RightFixtures { get; set; } = new ObservableCollection<FixtureDef>();
         public ObservableCollection<FunctionDef> RightFunctions { get; set; } = new ObservableCollection<FunctionDef>();
 
+        public bool FixturesMatch { get; set; } = false;
+
         public MainViewModel()
         {
             LoadLeftCommand = new AsyncRelayCommand(LoadLeftSource);
             LoadRightCommand = new AsyncRelayCommand(LoadRightSource);
+        }
+
+        private Dictionary<string,FunctionDef> AddTreeBase(ObservableCollection<FunctionDef> funcCollection)
+        {
+            var quickRef = new Dictionary<string, FunctionDef>();
+            foreach (var supportedType in Loader.SupportedFunctionTypes)
+            {
+                funcCollection.Add(new FunctionDef("Folder", supportedType));
+                quickRef.Add(supportedType, funcCollection.First(f => f.Name == supportedType));
+            }
+            return quickRef; 
         }
 
         private async Task LoadLeftSource()
@@ -48,9 +63,9 @@ namespace QLCMergeUI.ViewModels
                 {
                     PickerTitle = "Select a QLC Project File (*.qxw)",
                     FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
-                            {
-                                { DevicePlatform.WinUI, new[] { "*.qxw" } }
-                            })
+                        {
+                            { DevicePlatform.WinUI, new[] { "*.qxw" } }
+                        })
                 });
 
             return selected?.FullPath;
@@ -71,11 +86,134 @@ namespace QLCMergeUI.ViewModels
 
                 var funcs = Loader.DiscoverFunctions(result.XmlDoc);
                 functionsList.Clear();
-                foreach (var func in funcs)
+                
+                foreach(var func in funcs)
                 {
                     functionsList.Add(func.Value);
                 }
             }
+
+            FixturesMatch = DoFixturesMatch();
+            CompareFunctions();
+        }
+
+        private bool DoFixturesMatch()
+        {
+            if(LeftFixtures.Count !=  RightFixtures.Count)
+            {  return false; }
+
+            for (var index = 0; index < LeftFixtures.Count; index++)
+            {
+                if (LeftFixtures[index].Id != RightFixtures[index].Id) 
+                { return false; }
+
+                if (LeftFixtures[index].Address != RightFixtures[index].Address)
+                { return false; }
+
+                if (LeftFixtures[index].Name != RightFixtures[index].Name)
+                { return false; }
+
+                if (LeftFixtures[index].Channels != RightFixtures[index].Channels)
+                { return false; }
+            }
+
+            return true;
+        }
+
+        private void CompareFunctions()
+        {
+            if(LeftFunctions.Count == 0 || RightFunctions.Count == 0) { return; }
+
+            var maxLeftId = LeftFunctions.Select(f => f.Id).Max();
+            var maxRightId = RightFunctions.Select(f => f.Id).Max();
+            if (maxLeftId == null || maxRightId == null) { return; }
+
+            var maxId = Math.Max(maxLeftId.Value, maxRightId.Value);
+            var divergedAt = maxId + 1;
+
+            for (var id = 0; id < maxId; id++) {
+
+                var leftDef = id <= maxLeftId ? LeftFunctions.FirstOrDefault(f => f.Id == id) : null;
+                var rightDef = id <= maxRightId ? RightFunctions.FirstOrDefault(f => f.Id == id) : null;
+
+                if (leftDef == null && rightDef == null)
+                {
+                    // neither has this ID, move on
+                }
+                else if (leftDef == null && rightDef != null)
+                {
+                    rightDef.Matched = DefinitionMatchType.None;
+                }
+                else if (leftDef != null && rightDef == null)
+                {
+                    leftDef.Matched = DefinitionMatchType.None;
+                }
+                else if (leftDef.ElemType == rightDef.ElemType
+                    && leftDef.Name == rightDef.Name 
+                    && leftDef.Inner == rightDef.Inner)
+                {
+                    leftDef.Matched = DefinitionMatchType.Matched;
+                    rightDef.Matched = DefinitionMatchType.Matched;
+                }
+                else
+                {
+                    // ID matches, check properties
+                    if (leftDef.ElemType != rightDef.ElemType)
+                    {
+                        leftDef.Matched = DefinitionMatchType.Divergent;
+                        rightDef.Matched = DefinitionMatchType.Divergent;
+                        if (divergedAt > id) 
+                        { 
+                            divergedAt = id; 
+                        }
+                    }
+                    else if (leftDef.Name != rightDef.Name && leftDef.Inner == rightDef.Inner)
+                    {
+                        // name change only
+                        leftDef.Matched = DefinitionMatchType.NameChange;
+                        rightDef.Matched = DefinitionMatchType.NameChange;
+                    }
+                    else if (leftDef.Inner != rightDef.Inner && leftDef.Name == rightDef.Name)
+                    {
+                        // same function, but has been modified
+                        leftDef.Matched = DefinitionMatchType.Modified;
+                        rightDef.Matched = DefinitionMatchType.Modified;
+                    }
+                    else
+                    {
+                        leftDef.Matched = DefinitionMatchType.Divergent;
+                        rightDef.Matched = DefinitionMatchType.Divergent;
+                        if (divergedAt > id)
+                        {
+                            divergedAt = id;
+                        }
+                    }
+                }
+
+                //if (leftDef.Id > rightDef.Id)
+                //{
+                //    var found = LeftFunctions.Where(f => f.Name == rightDef.Name && f.ElemType == rightDef.ElemType);
+                //    if (found.Any()) {
+                //        rightDef.MapTo = found.First().Id;
+                //    }
+                //    rightOffset++;
+                //} 
+                //else if (leftDef.Id < rightDef.Id)
+                //{
+                //    var found = RightFunctions.Where(f => f.Name == leftDef.Name && f.ElemType == leftDef.ElemType);
+                //    if (found.Any())
+                //    {
+                //        leftDef.MapTo = found.First().Id;
+                //    }
+                //    leftOffset++;
+                //} 
+                //else
+                //{
+                //}
+            }
+
+            var synced = divergedAt > maxId;
+
         }
     }
 }
