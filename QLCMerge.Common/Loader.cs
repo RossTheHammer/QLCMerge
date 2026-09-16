@@ -12,6 +12,9 @@ namespace QLCMerge.Common
         private const int _deltaLeadInLength = 30;
         private const int _deltaPreviewLength = 95;
 
+        public static readonly string[] SupportedFunctionTypes = { "Chaser", "Function", "Collection",
+            "Scene", "Show", "Sequence", "Audio", "Video", "Track", "ShowFunction", "Step" };
+
         public static (bool IsValid, XmlDocument XmlDoc) OpenProjectFile(string path)
         {
             bool isValid = true;
@@ -58,25 +61,28 @@ namespace QLCMerge.Common
             return fixtureDefs;
         }
 
-        public static readonly string[] SupportedFunctionTypes = { "Chaser", "Function", "Collection", "Scene", "Show", "Sequence", "Audio", "Video" };
         public static IDictionary<int, FunctionDef> DiscoverFunctions(XmlDocument xml)
         {
-            var funcDefs = new Dictionary<int, FunctionDef>();
-            
             var funcXmlNodes = GetFunctions(xml);
-            
-            if(funcXmlNodes != null)
+
+            return ExtractFunctionDefs(funcXmlNodes);
+        }
+
+        private static IDictionary<int, FunctionDef> ExtractFunctionDefs(XmlNodeList? funcXmlNodes, string? parentType = null)
+        {
+            var funcDefs = new Dictionary<int, FunctionDef>();
+            if (funcXmlNodes != null)
             {
                 var offsetPointer = 0;
                 while (offsetPointer < funcXmlNodes.Count)
                 {
-                    var funcDef = GetKeyFunctionValues(funcXmlNodes[offsetPointer] as XmlElement);
+                    var funcDef = GetKeyFunctionValues(funcXmlNodes[offsetPointer] as XmlElement, parentType);
 
                     if (funcDef == null)
                     {
                         // Maybe not an element, or other failure, just increment to skip
                         offsetPointer++;
-                    } 
+                    }
                     else
                     {
                         funcDefs.Add(offsetPointer++, funcDef);
@@ -320,18 +326,78 @@ namespace QLCMerge.Common
             return fixture;
         }
 
-        private static FunctionDef? GetKeyFunctionValues(XmlElement? element)
+        private static readonly string[] _functionsWithChildren = new[] { "Show", "Track" };
+        private static readonly string[] _steppedParents = new[] { "Chaser", "Collection" };
+        private static FunctionDef? GetKeyFunctionValues(XmlElement? element, string? parentType = null)
         {
             if (element == null)
             {
                 return null;
             }
 
-            int.TryParse(element.GetAttribute("ID"), out var id);
-            var name = element.GetAttribute("Name");
             var elType = element.GetAttribute("Type");
+            elType = !String.IsNullOrEmpty(elType) ? elType : element.Name;
 
-            return new FunctionDef(elType, name, id, element.InnerXml);
+            if (!SupportedFunctionTypes.Contains(elType))
+            {
+                return null;
+            }
+
+            var name = element.GetAttribute("Name");
+
+            int.TryParse(element.GetAttribute("ID"), out var id);
+
+            if (elType == "Step" & _steppedParents.Contains(parentType))
+            {
+                int.TryParse(element.GetAttribute("Number"), out id);
+            }
+
+            var func = new FunctionDef(elType, name, id, element.InnerXml);
+
+            int refId;
+            switch (elType)
+            {
+                case "Step":
+                    if (int.TryParse(element.InnerText, out refId))
+                    {
+                        func.RefId = refId;
+                    }
+                    break;
+                case "Track":
+                    if (int.TryParse(element.GetAttribute("SceneID"), out refId))
+                    {
+                        func.RefId = refId;
+                    }
+                    break;
+                case "Sequence":
+                    if (int.TryParse(element.GetAttribute("BoundScene"), out refId))
+                    {
+                        func.RefId = refId;
+                    }
+                    break;
+                case "ShowFunction":
+                    func.RefId = func.Id;
+                    break;
+            }
+
+            if (_functionsWithChildren.Contains( elType))
+            {
+                // collect children (Track, ShowFunction)
+                foreach(var child in ExtractFunctionDefs(element.ChildNodes, elType))
+                {
+                    func.Children.Add(child.Key, child.Value);
+                }
+            } 
+            else if (_steppedParents.Contains( elType))
+            {
+                // collect child steps
+                foreach (var child in ExtractFunctionDefs(element.ChildNodes, elType))
+                {
+                    func.Children.Add(child.Key, child.Value);
+                }
+            }
+
+            return func;
         }
 
         private static string FormatForId(FunctionDef def) => $"[{def.Id}]";

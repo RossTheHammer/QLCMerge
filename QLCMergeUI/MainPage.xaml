@@ -34,6 +34,8 @@
                         <ColumnDefinition Width="125"/>
                         <!-- name -->
                         <ColumnDefinition/>
+                        <!-- children -->
+                        <ColumnDefinition Width="40"/>
                         <!-- status -->
                         <ColumnDefinition Width="120"/>
                     </Grid.ColumnDefinitions>
@@ -41,8 +43,8 @@
                     <Label Grid.Column="0" Text="{Binding Id}" FontAttributes="Bold" HorizontalTextAlignment="Center" Padding="3" />
                     <Label Grid.Column="1" Text="{Binding ElemType, StringFormat='[{0}]'}"  HorizontalTextAlignment="Center" Padding="3"/>
                     <Label Grid.Column="2" Text="{Binding Name}" FontAttributes="Bold" HorizontalTextAlignment="Start" Padding="3"/>
-                    <!--<Label Grid.Column="0" Text="{Binding Children.Count, StringFormat='({0})'}" Padding="3"/>-->
-                    <Label Grid.Column="3" Text="{Binding Matched}" HorizontalTextAlignment="Center" Padding="3"/>
+                    <Label Grid.Column="3" Text="{Binding Children.Count, StringFormat='({0})'}" Padding="3"/>
+                    <Label Grid.Column="4" Text="{Binding Matched}" HorizontalTextAlignment="Center" Padding="3"/>
                 </Grid>
             </DataTemplate>
         </ResourceDictionary>
@@ -89,6 +91,9 @@
                 <CollectionView 
                     SelectionMode="Multiple"
                     ItemsSource="{Binding LeftFunctions}"
+                    SelectedItems="{Binding SelectedLeftFunctions}"
+                    SelectionChangedCommand="{Binding LeftSelectionChangedCommand}"
+                    SelectionChangedCommandParameter="{Binding SelectedItems, Source={RelativeSource Self}}"
                     ItemTemplate="{StaticResource functionTile}"/>
             </Border>
             <Grid Grid.Row="3" Grid.Column="0" ColumnSpacing="3">
@@ -96,7 +101,7 @@
                     <ColumnDefinition/>
                     <ColumnDefinition/>
                 </Grid.ColumnDefinitions>
-                <Button Grid.Column="0" Text="Select all Divergent"/>
+                <Button Grid.Column="0" Text="Select all Divergent" Command="{Binding SelectLeftDivergentCommand}"/>
                 <Button Grid.Column="1" Text="Copy selected right ==&gt;"/>
             </Grid>
             
@@ -120,6 +125,9 @@
                 <CollectionView 
                     SelectionMode="Multiple"
                     ItemsSource="{Binding RightFunctions}"
+                    SelectedItems="{Binding SelectedRightFunctions}"
+                    SelectionChangedCommand="{Binding RightSelectionChangedCommand}"
+                    SelectionChangedCommandParameter="{Binding SelectedItems, Source={RelativeSource Self}}"
                     ItemTemplate="{StaticResource functionTile}"/>
             </Border>
             <Grid Grid.Row="3" Grid.Column="1" ColumnSpacing="3">
@@ -128,7 +136,7 @@
                     <ColumnDefinition/>
                 </Grid.ColumnDefinitions>
                 <Button Grid.Column="0" Text="&lt;== Copy selected left"/>
-                <Button Grid.Column="1" Text="Select all Divergent"/>
+                <Button Grid.Column="1" Text="Select all Divergent" Command="{Binding SelectRightDivergentCommand}"/>
             </Grid>
 
             <!-- Bottom Bar -->
@@ -140,17 +148,20 @@
                         <ColumnDefinition/>
                         <ColumnDefinition/>
                         <ColumnDefinition/>
+                        <ColumnDefinition/>
                     </Grid.ColumnDefinitions>
                     <Label Grid.Column="0" HorizontalTextAlignment="Center" 
-                           Text="{Binding LeftDivergentCount, StringFormat='Divergent = {0}'}"/>
+                           Text="{Binding SelectedLeftFunctions.Count, StringFormat='Selected = {0}'}"/>
                     <Label Grid.Column="1" HorizontalTextAlignment="End" 
                            Text="{Binding FixturesMatch, StringFormat='Fixtures Match = {0}'}"/>
                     <Label Grid.Column="2" HorizontalTextAlignment="Center" 
                            Text="{Binding FunctionsMatch, StringFormat='Functions Match = {0}'}"/>
-                    <Label Grid.Column="3" HorizontalTextAlignment="Start" 
+                    <Label Grid.Column="3" HorizontalTextAlignment="Center" 
+                           Text="{Binding LeftDivergentCount, StringFormat='Divergent Count = {0}'}"/>
+                    <Label Grid.Column="4" HorizontalTextAlignment="Start" 
                            Text="{Binding DivergentId, StringFormat='Diverged at {0}'}"/>
-                    <Label Grid.Column="4" HorizontalTextAlignment="Center" 
-                           Text="{Binding RightDivergentCount, StringFormat='Divergent = {0}'}"/>
+                    <Label Grid.Column="5" HorizontalTextAlignment="Center" 
+                           Text="{Binding SelectedRightFunctions.Count, StringFormat='Selected = {0}'}"/>
                 </Grid>
             </Border>
         </Grid>

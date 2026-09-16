@@ -3,12 +3,13 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using QLCMerge.Common;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Windows.Input;
 using Windows.ApplicationModel.Activation;
 
 namespace QLCMergeUI.ViewModels
 {
-    partial class MainViewModel : ObservableObject
+    public partial class MainViewModel : ObservableObject
     {
         private const string _pathPlaceholder = "[pick a compatible file]";
 
@@ -62,20 +63,136 @@ namespace QLCMergeUI.ViewModels
             set => SetProperty(ref _rightDivergentCount, value);
         }
 
-        public ObservableCollection<FixtureDef> LeftFixtures { get; set; } = new ObservableCollection<FixtureDef>();
-        public ObservableCollection<FunctionDef> LeftFunctions { get; set; } = new ObservableCollection<FunctionDef>();
+        public ObservableCollection<FixtureDef> LeftFixtures { get; } //= new ObservableCollection<FixtureDef>();
+        public ObservableCollection<FunctionDef> LeftFunctions { get; } //= new ObservableCollection<FunctionDef>();
+        public ObservableCollection<FunctionDef> SelectedLeftFunctions { get; } //= new ObservableCollection<FunctionDef>();
+        public ICommand LeftSelectionChangedCommand { get; }
 
-        public ObservableCollection<FixtureDef> RightFixtures { get; set; } = new ObservableCollection<FixtureDef>();
-        public ObservableCollection<FunctionDef> RightFunctions { get; set; } = new ObservableCollection<FunctionDef>();
+        public ObservableCollection<FixtureDef> RightFixtures { get; } //= new ObservableCollection<FixtureDef>();
+        public ObservableCollection<FunctionDef> RightFunctions { get; } //= new ObservableCollection<FunctionDef>();
+        public ObservableCollection<FunctionDef> SelectedRightFunctions { get; } //= new ObservableCollection<FunctionDef>();
+        public ICommand RightSelectionChangedCommand { get; }
+
 
         public ICommand LoadLeftCommand { get; }
-
         public ICommand LoadRightCommand { get; }
+
+        public ICommand SelectLeftDivergentCommand { get; }
+        public ICommand SelectRightDivergentCommand { get; }
+
+        public ICommand CopyLeftToRightCommand { get; }
+        public ICommand CopyRightToLeftCommand { get; }
 
         public MainViewModel() : base()
         {
+            LeftFixtures = new ObservableCollection<FixtureDef>();
+            LeftFunctions = new ObservableCollection<FunctionDef>();
+            SelectedLeftFunctions = new ObservableCollection<FunctionDef>();
+            LeftSelectionChangedCommand = new AsyncRelayCommand<object>(LeftSelectionChanged);
+
+            SelectedLeftFunctions.CollectionChanged += SelectedFunctions_CollectionChanged;
+
+            RightFixtures = new ObservableCollection<FixtureDef>();
+            RightFunctions = new ObservableCollection<FunctionDef>();
+            SelectedRightFunctions = new ObservableCollection<FunctionDef>();
+            RightSelectionChangedCommand = new AsyncRelayCommand<object>(RightSelectionChanged);
+
+            SelectedRightFunctions.CollectionChanged += SelectedFunctions_CollectionChanged;
+
             LoadLeftCommand = new AsyncRelayCommand(LoadLeftSource);
             LoadRightCommand = new AsyncRelayCommand(LoadRightSource);
+
+            SelectLeftDivergentCommand = new AsyncRelayCommand(SelectLeftDivergent);
+            SelectRightDivergentCommand = new AsyncRelayCommand(SelectRightDivergent);
+
+            CopyLeftToRightCommand = new AsyncRelayCommand(CopyLeftToRight);
+            CopyRightToLeftCommand = new AsyncRelayCommand(CopyRightToLeft);
+        }
+
+        private async Task LeftSelectionChanged(object? p)
+        {
+            Debug.WriteLine(p?.GetType().Name);
+        }
+
+        private async Task RightSelectionChanged(object? p)
+        {
+            Debug.WriteLine(p?.GetType().Name);
+        }
+
+        private void SelectedFunctions_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            Debug.WriteLine(nameof(SelectedFunctions_CollectionChanged));
+        }
+
+        private async Task CopyLeftToRight()
+        {
+            CopyFromTo(LeftFunctions, SelectedLeftFunctions, RightFunctions);
+        }
+
+        private async Task CopyRightToLeft()
+        {
+            CopyFromTo(RightFunctions, SelectedRightFunctions, LeftFunctions);
+        }
+
+        private void CopyFromTo(
+            ObservableCollection<FunctionDef> from, 
+            ObservableCollection<FunctionDef> selected, 
+            ObservableCollection<FunctionDef> to)
+        {
+            // next open ID
+            var nextId = to.Max(f => f.Id).GetValueOrDefault() + 1;
+
+            // create an ID map
+            var idMap = new Dictionary<int, int>();
+            foreach (var func in selected)
+            {
+                if (func.Id.HasValue)
+                {
+                    func.MapTo = nextId++;
+                    idMap.Add(func.Id.Value, func.MapTo.Value);
+                }
+            }
+
+
+
+            // TODO - what about Modified that reference the divergent ID?
+        }
+
+        private async Task SelectLeftDivergent()
+        {
+            foreach (var func in LeftFunctions)
+            {
+                var selected = SelectedLeftFunctions.FirstOrDefault(f => f.Id == func.Id);
+                if (func.Matched == DefinitionMatchType.Divergent)
+                {
+                    if(selected == null)
+                    {
+                        SelectedLeftFunctions.Add(func);
+                    }
+                } else if (selected != null)
+                {
+                    SelectedLeftFunctions.Remove(selected);
+                }
+            }
+        }
+
+        private async Task SelectRightDivergent()
+        {
+            foreach (var func in RightFunctions)
+            {
+                var selected = SelectedRightFunctions.FirstOrDefault(f => f.Id == func.Id);
+                if (func.Matched == DefinitionMatchType.Divergent)
+                {
+                    if (selected == null)
+                    {
+                        SelectedRightFunctions.Add(func);
+                    }
+                }
+                else if (selected != null)
+                {
+                    SelectedRightFunctions.Remove(selected);
+                }
+            }
         }
 
         private Dictionary<string,FunctionDef> AddTreeBase(ObservableCollection<FunctionDef> funcCollection)
